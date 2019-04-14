@@ -38,8 +38,7 @@ struct ConnectionHandler : public MyowareBLEConnection::EventHandler
 void setup()
 {
   Serial.begin(115200);
-  conn = new MyowareBLEConnection("E2MMyowareDeviceHR");
-  conn->set_event_listener(new ConnectionHandler());
+  conn = new MyowareBLEConnection("E2MMyowareDeviceHR", new ConnectionHandler());
   Serial.println("Starting BLE work!");
   conn->init();
 }
