@@ -3,8 +3,9 @@
 
 #include <BLECharacteristic.h>
 
-struct MyowareBLEConnection
+class MyowareBLEConnection
 {
+public:
   struct EventHandler
   {
     virtual void on_receive_calibration_threshold(int threshold) {}
@@ -21,6 +22,7 @@ struct MyowareBLEConnection
   void set_event_listener(EventHandler *h) { event_handler = h; }
   void put_telemetry_value(uint8_t left, uint8_t right);
 
+private:
   const char *device_name = nullptr;
   EventHandler *event_handler = nullptr;
   bool is_connected = false;
