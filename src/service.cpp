@@ -89,6 +89,7 @@ void MyowareBLEConnection::tick()
       event_handler->on_disconnected();
     }
   }
+  prev_is_connected = is_connected;
   if (is_connected)
   {
     std::string data = chrHeartRateControlPoint->getValue();
