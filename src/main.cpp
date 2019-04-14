@@ -14,14 +14,30 @@
 // https://www.uuidgenerator.net/
 
 //#define SERVICE_UUID "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
-#define SERVICE_UUID "03B80E5A-EDE8-4B33-A751-6CE34EC4C700"
+// #define SERVICE_UUID "03b80e5a-ede8-4b33-a751-6ce34ec4c700"
+#define SVC_RSC "1814"      // org.bluetooth.service.running_speed_and_cadence
+#define SVC_HR "180d"       // org.bluetooth.service.heart_rate
+#define SERVICE_UUID SVC_HR // org.bluetooth.service.running_speed_and_cadence
 //#define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
-#define CHARACTERISTIC_UUID "7772E5DB-3868-4112-A1A9-F2669D106BF3"
+#define CHR_HR_HEART_RATE_MEASUREMENT "2a37" // org.bluetooth.characteristic.heart_rate_measurement
+#define CHR_HR_BODY_SENSOR_LOCATION "2a37"   // org.bluetooth.characteristic.heart_rate_measurement
+#define CHR_HR_HEART_RATE_CONTROL_POINT "2a39"
+#define CHR_RSC_MEASUERMENT "2a53"      // org.bluetooth.characteristic.rsc_measurement
+#define CHR_RSC_FEATURE "2a54"          // org.bluetooth.characteristic.rsc_feature
+#define CHR_RSC_SENSOR_LOCATION "2a5d"  // org.bluetooth.characteristic.sensor_location
+#define CHR_RSC_SC_CONTROL_POINT "2a55" // org.bluetooth.characteristic.sc_control_point
+//#define CHARACTERISTIC_UUID "7772e5db-3868-4112-a1a9-f2669d106bf3"
 
 bool deviceConnected = false;
 bool prevDeviceConnected = false;
 
-BLECharacteristic *pCharacteristic = NULL;
+BLECharacteristic *chrHrBodySensorLocation = NULL;
+BLECharacteristic *chrHrHeartRateMeasurement = NULL;
+BLECharacteristic *chrHrHeartRateControlPoint = NULL;
+BLECharacteristic *chrRscMeasurement = NULL;
+BLECharacteristic *chrRscFeature = NULL;
+BLECharacteristic *chrRscSensorLocation = NULL;
+BLECharacteristic *chrRscScControlPoint = NULL;
 
 struct DeviceConnectionCallbacks : public BLEServerCallbacks
 {
@@ -40,24 +56,32 @@ void setup()
   Serial.begin(115200);
   Serial.println("Starting BLE work!");
 
-  BLEDevice::init("E2MMyowareDeviceMidi");
+  BLEDevice::init("E2MMyowareDevicePace");
   BLEServer *pServer = BLEDevice::createServer();
   pServer->setCallbacks(new DeviceConnectionCallbacks());
 
   BLEService *pService = pServer->createService(BLEUUID(SERVICE_UUID));
 
-  pCharacteristic = pService->createCharacteristic(
-      BLEUUID(CHARACTERISTIC_UUID),
-      BLECharacteristic::PROPERTY_READ |
-          BLECharacteristic::PROPERTY_WRITE |
-          BLECharacteristic::PROPERTY_NOTIFY |
-          BLECharacteristic::PROPERTY_WRITE_NR);
-  pCharacteristic->addDescriptor(new BLE2902());
+  chrHrHeartRateMeasurement = pService->createCharacteristic(
+      BLEUUID(CHR_HR_HEART_RATE_MEASUREMENT),
+      BLECharacteristic::PROPERTY_NOTIFY);
+  chrHrHeartRateMeasurement->addDescriptor(new BLE2902());
+
+  chrHrBodySensorLocation = pService->createCharacteristic(
+      BLEUUID(CHR_HR_BODY_SENSOR_LOCATION),
+      BLECharacteristic::PROPERTY_READ);
+  chrHrBodySensorLocation->addDescriptor(new BLE2902());
+
+  chrHrHeartRateControlPoint = pService->createCharacteristic(
+      BLEUUID(CHR_HR_HEART_RATE_CONTROL_POINT),
+      BLECharacteristic::PROPERTY_WRITE);
+  chrHrHeartRateControlPoint->addDescriptor(new BLE2902());
 
   pService->start();
+
   // BLEAdvertising *pAdvertising = pServer->getAdvertising();  // this still is working for backward compatibility
   BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
-  pAdvertising->addServiceUUID(SERVICE_UUID);
+  pAdvertising->addServiceUUID(BLEUUID(SERVICE_UUID));
   pAdvertising->setScanResponse(true);
   pAdvertising->setMinPreferred(0x06); // functions that help with iPhone connections issue
   pAdvertising->setMinPreferred(0x12);
@@ -83,17 +107,8 @@ void loop()
   handle_update_connection_state();
   if (deviceConnected)
   {
-    uint8_t midiPacket[] = {
-        0x80, // header
-        0x80, // timestamp, not implemented
-        0x00, // status
-        0x3c, // 0x3c == 60 == middle c
-        0x00  // velocity
-    };
-    midiPacket[2] = 0x90;
-    midiPacket[4] = 127;
-    pCharacteristic->setValue(midiPacket, 5);
-    pCharacteristic->notify();
+    // pCharacteristic->setValue(midiPacket, 5);
+    // pCharacteristic->notify();
     delay(500);
     return;
   }
