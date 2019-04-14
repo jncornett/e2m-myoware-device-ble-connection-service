@@ -19,7 +19,7 @@ struct MyowareBLEConnection
   void init();
   void tick();
   void set_event_listener(EventHandler *h) { event_handler = h; }
-  void put_telemetry_value(short left, short right);
+  void put_telemetry_value(uint8_t left, uint8_t right);
 
   const char *device_name = nullptr;
   EventHandler *event_handler = nullptr;

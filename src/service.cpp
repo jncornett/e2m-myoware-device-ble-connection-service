@@ -106,11 +106,33 @@ void MyowareBLEConnection::tick()
   }
 }
 
-void MyowareBLEConnection::put_telemetry_value(short left, short right)
+struct __attribute__((packed)) HRMeasurement
 {
-  short data[] = {
-      left,
-      right,
-  };
-  chrHeartRateMeasurement->setValue((uint8_t *)data, sizeof(data));
+  enum class Flags : uint8_t
+  {
+    VALUE_FORMAT_UINT8 = 0,
+    VALUE_FORMAT_UINT16 = 0b00000001,
+    SENSOR_CONTACT_UNSUPPORTED = 0,
+    SENSOR_CONTACT_NOT_DETECTED = 0b00000100,
+    SENSOR_CONTACT_DETECTED = 0b00000110,
+    ENERGY_EXPENDED_UNSUPPORTED = 0,
+    ENERGY_EXPENDED_SUPPORTED = 0b00001000,
+    RR_INTERVAL_UNSUPPORTED = 0,
+    RR_INTERVAL_SUPPORTED = 0b00010000
+  } flags;
+  union Data {
+    uint8_t u8;
+    uint16_t u16;
+  } data;
+
+  uint8_t *raw() const { return (uint8_t *)this; }
+};
+
+void MyowareBLEConnection::put_telemetry_value(uint8_t left, uint8_t right)
+{
+  HRMeasurement m;
+  m.flags = HRMeasurement::Flags::VALUE_FORMAT_UINT16;
+  m.data.u16 = (left << 8) | right;
+  chrHeartRateMeasurement->setValue(m.raw(), sizeof(m));
+  chrHeartRateMeasurement->notify();
 }
