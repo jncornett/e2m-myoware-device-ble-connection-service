@@ -7,18 +7,9 @@
 #include <BLE2902.h>
 
 #include "config.h"
+#include "gatt_heart_rate.h"
 
-#define SVC_HR "180d" // org.bluetooth.service.heart_rate
-#define SVC_UUID SVC_HR
-
-#define CHR_HR_HEART_RATE_MEASUREMENT_UUID "2a37" // org.bluetooth.characteristic.heart_rate_measurement
-#define CHR_HR_HEART_RATE_MEASUREMENT_PROPS BLECharacteristic::PROPERTY_NOTIFY
-
-#define CHR_HR_BODY_SENSOR_LOCATION_UUID "2a38" // org.bluetooth.characteristic.body_sensor_location
-#define CHR_HR_BODY_SENSOR_LOCATION_PROPS BLECharacteristic::PROPERTY_READ
-
-#define CHR_HR_HEART_RATE_CONTROL_POINT_UUID "2a39" // org.bluetooth.characteristic.heart_rate_
-#define CHR_HR_HEART_RATE_CONTROL_POINT_PROPS BLECharacteristic::PROPERTY_WRITE
+#define SVC_UUID SVC_HEART_RATE
 
 static BLECharacteristic *createCharacteristic(BLEService *svc, BLEUUID service_uuid, uint32_t props)
 {
@@ -73,36 +64,10 @@ void MyowareBLEConnection::init()
 
 void MyowareBLEConnection::tick()
 {
-  if (is_connected && !prev_is_connected)
-  {
-    // disconnected -> connected
-    if (event_handler)
-    {
-      event_handler->on_connected();
-    }
-  }
-  else if (!is_connected && prev_is_connected)
-  {
-    // connected -> disconnected
-    if (event_handler)
-    {
-      event_handler->on_disconnected();
-    }
-  }
-  prev_is_connected = is_connected;
+  handle_connection_state_changes();
   if (is_connected)
   {
-    std::string data = chrHeartRateControlPoint->getValue();
-    // TODO check for change and initiate callback
-    int calibration_threshold = 0;
-    if (calibration_threshold != prev_calibration_threshold)
-    {
-      prev_calibration_threshold = calibration_threshold;
-      if (event_handler)
-      {
-        event_handler->on_receive_calibration_threshold(calibration_threshold);
-      }
-    }
+    handle_control_point_state_changes();
   }
 }
 
@@ -128,11 +93,55 @@ struct __attribute__((packed)) HRMeasurement
   uint8_t *raw() const { return (uint8_t *)this; }
 };
 
-void MyowareBLEConnection::put_telemetry_value(uint8_t left, uint8_t right)
+void MyowareBLEConnection::put_telemetry_values(uint8_t left, uint8_t right)
 {
   HRMeasurement m;
   m.flags = HRMeasurement::Flags::VALUE_FORMAT_UINT16;
   m.data.u16 = (left << 8) | right;
   chrHeartRateMeasurement->setValue(m.raw(), sizeof(m));
   chrHeartRateMeasurement->notify();
+}
+
+void MyowareBLEConnection::set_trigger_threshold(uint8_t threshold)
+{
+  chrBodySensorLocation->setValue(&threshold, sizeof(threshold));
+}
+
+void MyowareBLEConnection::handle_connection_state_changes()
+{
+  if (is_connected && !prev_is_connected)
+  {
+    // disconnected -> connected
+    if (event_handler)
+    {
+      event_handler->on_connected();
+    }
+  }
+  else if (!is_connected && prev_is_connected)
+  {
+    // connected -> disconnected
+    if (event_handler)
+    {
+      event_handler->on_disconnected();
+    }
+  }
+  prev_is_connected = is_connected;
+}
+
+void MyowareBLEConnection::handle_control_point_state_changes()
+{
+  std::string raw_data = chrHeartRateControlPoint->getValue();
+  if (raw_data.size() <= 0)
+  {
+    return;
+  }
+  int trigger_threshold = *raw_data.c_str();
+  if (trigger_threshold != prev_trigger_threshold)
+  {
+    prev_trigger_threshold = trigger_threshold;
+    if (event_handler)
+    {
+      event_handler->on_change_trigger_threshold(trigger_threshold);
+    }
+  }
 }

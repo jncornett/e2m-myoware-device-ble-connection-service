@@ -8,10 +8,15 @@ int i = 0;
 
 struct ConnectionHandler : public MyowareBLEConnection::EventHandler
 {
-  void on_receive_calibration_threshold(int threshold) override
+  void on_change_trigger_threshold(uint8_t threshold) override
   {
     DEBUG_PRINTLN("Received calibration threshold update");
     DEBUG_PRINTLN(threshold);
+  }
+
+  void on_reset_calibrated_min_max()
+  {
+    DEBUG_PRINTLN("Received reset calibration command");
   }
 
   void on_connected() override
@@ -41,7 +46,7 @@ void setup()
 
 void loop()
 {
-  conn->put_telemetry_value(i, i + 1);
+  conn->put_telemetry_values(i, i + 1);
   conn->tick();
   i++;
   delay(1000);
